@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Heart Orbit</title>
+  <style>
+    body {
+      margin: 0;
+      background-color: #000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      overflow: hidden;
+      perspective: 1000px;
+      font-family: Arial, sans-serif;
+    }
+
+    .container {
+      position: relative;
+      width: min(82vmin, 700px);
+      height: min(92vmin, 760px);
+      transform-style: preserve-3d;
+    }
+
+    .qr-trigger {
+      position: fixed;
+      top: 22px;
+      right: 22px;
+      z-index: 20;
+      border: 1px solid rgba(255, 150, 201, 0.28);
+      border-radius: 999px;
+      background: rgba(10, 6, 10, 0.78);
+      color: #ffd3e7;
+      padding: 0.78rem 1rem;
+      font-size: 0.82rem;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      cursor: pointer;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.26);
+    }
+
+    .qr-modal[hidden] {
+      display: none;
+    }
+
+    .qr-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 30;
+      display: grid;
+      place-items: center;
+      background: rgba(0, 0, 0, 0.74);
+      backdrop-filter: blur(16px);
+      padding: 14px;
+    }
+
+    .qr-panel {
+      width: min(90vw, 380px);
+      max-height: calc(100vh - 28px);
+      border: 1px solid rgba(255, 150, 201, 0.18);
+      border-radius: 24px;
+      background:
+        linear-gradient(180deg, rgba(25, 14, 22, 0.96) 0%, rgba(10, 8, 12, 0.96) 100%);
+      color: #ffe7f1;
+      padding: 16px;
+      box-shadow: 0 30px 80px rgba(0, 0, 0, 0.4);
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(255, 150, 201, 0.35) transparent;
+    }
+
+    .qr-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    .qr-title {
+      margin: 0;
+      font-size: 0.96rem;
+      letter-spacing: 0.04em;
+    }
+
+    .qr-close {
+      border: 0;
+      background: transparent;
+      color: #ffcbe0;
+      font-size: 1.6rem;
+      line-height: 1;
+      cursor: pointer;
+    }
+
+    .qr-copy {
+      margin: 10px 0 0;
+      color: rgba(255, 233, 242, 0.76);
+      font-size: 0.84rem;
+      line-height: 1.45;
+    }
+
+    .qr-box {
+      width: min(100%, 220px);
+      aspect-ratio: 1;
+      margin: 0 auto 12px;
+      border-radius: 20px;
+      background: #fff;
+      padding: 12px;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+    }
+
+    .qr-image {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+
+    .qr-placeholder {
+      color: #5a4250;
+      text-align: center;
+      font-size: 0.92rem;
+      line-height: 1.5;
+      padding: 12px;
+    }
+
+    .qr-note {
+      min-height: 2.2em;
+      margin: 10px 0 0;
+      color: rgba(255, 215, 230, 0.72);
+      font-size: 0.8rem;
+      line-height: 1.45;
+    }
+
+    .qr-link {
+      margin-top: 12px;
+      padding: 0.82rem 0.9rem;
+      border: 1px solid rgba(255, 150, 201, 0.16);
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.04);
+      color: #fff0f6;
+      font-size: 0.86rem;
+      line-height: 1.45;
+      word-break: break-all;
+    }
+
+    .qr-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+
+    .qr-action {
+      flex: 1 1 120px;
+      border: 1px solid rgba(255, 150, 201, 0.22);
+      border-radius: 14px;
+      background: rgba(255, 150, 201, 0.08);
+      color: #ffe8f2;
+      padding: 0.72rem 0.8rem;
+      text-align: center;
+      font-size: 0.82rem;
+      font-weight: 700;
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    .qr-action[hidden] {
+      display: none;
+    }
+
+    .ui_love_word {
+      color: #ea80b0;
+      font-size: 0.9rem;
+      font-family: Arial, sans-serif;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      text-shadow: 0 0 6px #ffb3d9;
+      white-space: nowrap;
+      opacity: 0;
+      animation: heart-anim 4s infinite linear;
+      transform-origin: center;
+      letter-spacing: 0.01em;
+    }
+
+    .orbit-word {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      color: #ff96c9;
+      font-size: clamp(1.35rem, 1.05rem + 0.8vw, 1.8rem);
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: lowercase;
+      white-space: nowrap;
+      text-shadow:
+        0 0 10px rgba(255, 150, 201, 0.45),
+        0 0 24px rgba(234, 128, 176, 0.22);
+      transform-origin: center;
+      will-change: transform, opacity, filter;
+    }
+
+    @keyframes heart-anim {
+      0% {
+        opacity: 0;
+        transform: translate(-50%, -50%) translate3d(var(--x), var(--y), calc(var(--z) - 80px)) scale(0.82);
+      }
+
+      50% {
+        opacity: 1;
+        transform: translate(-50%, -50%) translate3d(var(--x), var(--y), var(--z)) scale(1);
+      }
+
+      100% {
+        opacity: 0;
+        transform: translate(-50%, -50%) translate3d(var(--x), var(--y), calc(var(--z) + 80px)) scale(1.08);
+      }
+    }
+
+    @media (max-width: 640px) {
+      .container {
+        width: 90vw;
+        height: 78vh;
+      }
+
+      .qr-trigger {
+        top: 16px;
+        right: 16px;
+        padding: 0.74rem 0.9rem;
+      }
+
+      .qr-modal {
+        padding: 10px;
+      }
+
+      .qr-panel {
+        width: min(94vw, 360px);
+        max-height: calc(100vh - 20px);
+        padding: 14px;
+      }
+
+      .ui_love_word {
+        font-size: 0.8rem;
+      }
+
+    }
+  </style>
+</head>
+<body>
+  <button class="qr-trigger" id="qr-trigger" type="button">QR</button>
+  <div class="container" id="heart-container">
+    /* ใส่ชื่อตรงนี้ */
+    <span class="orbit-word" id="orbit-word"></span>
+  </div>
+
+  <div class="qr-modal" id="qr-modal" hidden>
+    <div class="qr-panel" role="dialog" aria-modal="true" aria-labelledby="qr-title">
+      <div class="qr-head">
+        <h2 class="qr-title" id="qr-title">Open On iPhone, iPad, macOS</h2>
+        <button class="qr-close" id="qr-close" type="button" aria-label="Close">&times;</button>
+      </div>
+      <p class="qr-copy" id="qr-copy"></p>
+      <div class="qr-box">
+        <img class="qr-image" id="qr-image" alt="QR code for this page" hidden>
+        <div class="qr-placeholder" id="qr-placeholder">Preparing your QR code...</div>
+      </div>
+      <div class="qr-link" id="qr-link"></div>
+      <p class="qr-note" id="qr-note"></p>
+      <div class="qr-actions">
+        <button class="qr-action" id="copy-link" type="button">Copy Link</button>
+        <a class="qr-action" id="open-link" href="#" target="_blank" rel="noreferrer" hidden>Open Link</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const container = document.getElementById("heart-container");
+    // คำเดียวที่ถูกนำมาให้โคจรรอบหัวใจ
+    const orbitWord = document.getElementById("orbit-word");
+    const qrTrigger = document.getElementById("qr-trigger");
+    const qrModal = document.getElementById("qr-modal");
+    const qrClose = document.getElementById("qr-close");
+    const qrCopy = document.getElementById("qr-copy");
+    const qrImage = document.getElementById("qr-image");
+    const qrPlaceholder = document.getElementById("qr-placeholder");
+    const qrLink = document.getElementById("qr-link");
+    const qrNote = document.getElementById("qr-note");
+    const copyLinkButton = document.getElementById("copy-link");
+    const openLinkButton = document.getElementById("open-link");
+    const totalWords = 92;
+    const text = "I love you";
+    // ถ้ามีลิงก์ GitHub Pages แล้ว ให้นำมาใส่ตรงนี้เพื่อบังคับให้ QR ชี้ไปที่ลิงก์ public เสมอ
+    const PUBLIC_SHARE_URL = "";
+    const DEFAULT_LAN_HOST = "192.168.1.35";
+    const LOCAL_HOSTNAMES = ["localhost", "127.0.0.1", "::1"];
+
+    function tryParseUrl(value) {
+      try {
+        return new URL(value);
+      } catch (error) {
+        return null;
+      }
+    }
+
+    function isShareableUrl(value) {
+      const url = tryParseUrl(value);
+
+      return Boolean(
+        url &&
+        (url.protocol === "http:" || url.protocol === "https:") &&
+        !LOCAL_HOSTNAMES.includes(url.hostname)
+      );
+    }
+
+    function isPrivateNetworkHost(hostname) {
+      if (!hostname) {
+        return true;
+      }
+
+      const normalized = hostname.toLowerCase();
+
+      if (
+        LOCAL_HOSTNAMES.includes(normalized) ||
+        normalized === "0.0.0.0" ||
+        normalized.endsWith(".local")
+      ) {
+        return true;
+      }
+
+      if (/^127\./.test(normalized) || /^10\./.test(normalized) || /^192\.168\./.test(normalized)) {
+        return true;
+      }
+
+      if (/^169\.254\./.test(normalized)) {
+        return true;
+      }
+
+      const match = normalized.match(/^172\.(\d{1,3})\./);
+
+      return Boolean(match && Number(match[1]) >= 16 && Number(match[1]) <= 31);
+    }
+
+    function isPublicInternetUrl(value) {
+      const url = tryParseUrl(value);
+
+      return Boolean(
+        url &&
+        (url.protocol === "http:" || url.protocol === "https:") &&
+        !isPrivateNetworkHost(url.hostname)
+      );
+    }
+
+    function getQrTargetUrl() {
+      const currentUrl = tryParseUrl(window.location.href);
+      const configuredPublicUrl = tryParseUrl(PUBLIC_SHARE_URL);
+
+      if (configuredPublicUrl && isPublicInternetUrl(PUBLIC_SHARE_URL)) {
+        return configuredPublicUrl.href;
+      }
+
+      if (isShareableUrl(window.location.href)) {
+        return window.location.href;
+      }
+
+      const isFileUrl = currentUrl && currentUrl.protocol === "file:";
+      const port = currentUrl && currentUrl.port ? currentUrl.port : "5500";
+      const path = isFileUrl ? "/index.html" : (currentUrl && currentUrl.pathname ? currentUrl.pathname : "/index.html");
+      const search = currentUrl ? currentUrl.search : "";
+
+      if (DEFAULT_LAN_HOST) {
+        const normalizedPort = port && port !== "80" ? `:${port}` : "";
+        return `http://${DEFAULT_LAN_HOST}${normalizedPort}${path}${search}`;
+      }
+
+      return "";
+    }
+
+    function updateQr() {
+      const rawValue = getQrTargetUrl();
+      const parsedUrl = tryParseUrl(rawValue);
+
+      if (parsedUrl && ["http:", "https:", "file:"].includes(parsedUrl.protocol)) {
+        const encoded = encodeURIComponent(rawValue);
+        const isPublic = isPublicInternetUrl(rawValue);
+        qrImage.src = `https://api.qrserver.com/v1/create-qr-code/?size=640x640&data=${encoded}`;
+        qrImage.hidden = false;
+        qrPlaceholder.hidden = true;
+        openLinkButton.hidden = false;
+        openLinkButton.href = rawValue;
+        qrLink.textContent = rawValue;
+
+        if (isPublic) {
+          qrCopy.textContent = "Scan this QR from any device to open this page.";
+          qrNote.textContent = "Public link ready. This will work outside your local Wi-Fi too.";
+        } else if (isShareableUrl(rawValue)) {
+          qrCopy.textContent = "Scan this QR on the same Wi-Fi to open this page on another device.";
+          qrNote.textContent = "Make sure both devices are on the same Wi-Fi network.";
+        } else if (parsedUrl.protocol === "file:" || LOCAL_HOSTNAMES.includes(parsedUrl.hostname)) {
+          qrCopy.textContent = "Open this page from a local server first, then scan the QR.";
+          qrNote.textContent = "If scanning still fails, make sure this Mac is serving the page on the same port and both devices are on the same Wi-Fi.";
+        } else {
+          qrCopy.textContent = "Scan this QR to open this page.";
+          qrNote.textContent = "QR ready.";
+        }
+      } else {
+        qrImage.hidden = true;
+        qrImage.removeAttribute("src");
+        qrPlaceholder.hidden = false;
+        openLinkButton.hidden = true;
+        openLinkButton.removeAttribute("href");
+        qrCopy.textContent = "Open this page from a local server or GitHub Pages first.";
+        qrLink.textContent = "Could not build a shareable URL yet.";
+        qrNote.textContent = "Make sure this page is running from a local server.";
+      }
+    }
+
+    function openQrModal() {
+      qrModal.hidden = false;
+      updateQr();
+    }
+
+    function closeQrModal() {
+      qrModal.hidden = true;
+    }
+
+    function heartPoint(t) {
+      const x = 16 * Math.sin(t) ** 3;
+      const y =
+        13 * Math.cos(t) -
+        5 * Math.cos(2 * t) -
+        2 * Math.cos(3 * t) -
+        Math.cos(4 * t);
+      return { x, y };
+    }
+
+    function sampleHeartByLength(count) {
+      const densePoints = [];
+      const segments = 900;
+
+      for (let i = 0; i <= segments; i += 1) {
+        const t = (i / segments) * Math.PI * 2;
+        densePoints.push(heartPoint(t));
+      }
+
+      const lengths = [0];
+
+      for (let i = 1; i < densePoints.length; i += 1) {
+        const dx = densePoints[i].x - densePoints[i - 1].x;
+        const dy = densePoints[i].y - densePoints[i - 1].y;
+        lengths[i] = lengths[i - 1] + Math.hypot(dx, dy);
+      }
+
+      const totalLength = lengths[lengths.length - 1];
+      const sampled = [];
+
+      for (let i = 0; i < count; i += 1) {
+        const target = (i / count) * totalLength;
+        let index = 1;
+
+        while (index < lengths.length && lengths[index] < target) {
+          index += 1;
+        }
+
+        const previousLength = lengths[index - 1];
+        const nextLength = lengths[index];
+        const range = nextLength - previousLength || 1;
+        const ratio = (target - previousLength) / range;
+        const previousPoint = densePoints[index - 1];
+        const nextPoint = densePoints[index];
+
+        sampled.push({
+          x: previousPoint.x + (nextPoint.x - previousPoint.x) * ratio,
+          y: previousPoint.y + (nextPoint.y - previousPoint.y) * ratio
+        });
+      }
+
+      return sampled;
+    }
+
+    function buildHeart() {
+      container.querySelectorAll(".ui_love_word").forEach((node) => node.remove());
+
+      const isMobile = Math.min(window.innerWidth, window.innerHeight) < 640;
+      const scale = isMobile ? 12.8 : 17.2;
+      const layout = [];
+      const points = sampleHeartByLength(totalWords);
+
+      for (let i = 0; i < points.length; i += 1) {
+        const point = points[i];
+        const progress = i / points.length;
+        const depth = Math.sin(progress * Math.PI * 2) * 14;
+        const size = isMobile ? 0.74 : 0.82;
+        const pulseOffset = progress * 4;
+
+        layout.push({
+          x: point.x * scale * 0.92,
+          y: -point.y * scale * 1.06,
+          z: depth,
+          size,
+          delay: -pulseOffset
+        });
+      }
+
+      const rawX = layout.map((entry) => entry.x);
+      const rawY = layout.map((entry) => entry.y);
+      const offsetX = (Math.min(...rawX) + Math.max(...rawX)) / 2;
+      const offsetY = (Math.min(...rawY) + Math.max(...rawY)) / 2;
+
+      layout.forEach((entry) => {
+        const word = document.createElement("span");
+        const x = entry.x - offsetX;
+        const y = entry.y - offsetY;
+        const blur = Math.abs(entry.z) / 420;
+
+        word.className = "ui_love_word";
+        word.textContent = text;
+        word.style.setProperty("--x", `${x.toFixed(2)}px`);
+        word.style.setProperty("--y", `${y.toFixed(2)}px`);
+        word.style.setProperty("--z", `${entry.z.toFixed(2)}px`);
+        word.style.fontSize = `${entry.size.toFixed(2)}rem`;
+        word.style.animationDelay = `${entry.delay.toFixed(2)}s`;
+        word.style.filter = `blur(${blur.toFixed(2)}px)`;
+        word.style.opacity = "0";
+        container.appendChild(word);
+      });
+
+      container.appendChild(orbitWord);
+    }
+
+    // ทำให้คำว่า "" โคจรรอบหัวใจและสลับไปอยู่ด้านหน้า/ด้านหลัง
+    function animateOrbit(time) {
+      const t = time * 0.001;
+      const isMobile = Math.min(window.innerWidth, window.innerHeight) < 640;
+      // รัศมีแต่ละแกนใช้กำหนดความกว้าง ความสูง และมิติหลอกของวงโคจร
+      const radiusX = isMobile ? 158 : 220;
+      const radiusY = isMobile ? 46 : 62;
+      const radiusZ = isMobile ? 102 : 132;
+      const angle = t * 0.82;
+      const x = Math.cos(angle) * radiusX;
+      const y = Math.sin(angle) * radiusY;
+      const z = Math.sin(angle) * radiusZ;
+      // ปรับขนาดและความชัดเพื่อให้ดูเหมือนคำกำลังเข้าใกล้หรือถอยห่าง
+      const scale = z > 0 ? 1.04 : 0.92;
+      const opacity = z > 0 ? 0.98 : 0.38;
+      const blur = z > 0 ? 0 : 0.24;
+
+      // ขยับคำตามเส้นวงรีโดยยึดตำแหน่งจากกึ่งกลางของตัวคำ
+      orbitWord.style.transform = `
+        translate(-50%, -50%)
+       translate3d(${x.toFixed(2)}px, ${y.toFixed(2)}px, ${z.toFixed(2)}px)
+        scale(${scale.toFixed(2)})
+      `;
+      orbitWord.style.opacity = opacity.toFixed(2);
+      orbitWord.style.filter = `blur(${blur.toFixed(2)}px)`;
+      // สลับลำดับชั้นเพื่อให้คำอยู่หน้าหัวใจเมื่อโคจรเข้ามาด้านหน้า
+      orbitWord.style.zIndex = z > 0 ? "3" : "1";
+
+      requestAnimationFrame(animateOrbit);
+    }
+
+    qrTrigger.addEventListener("click", openQrModal);
+    qrClose.addEventListener("click", closeQrModal);
+    qrModal.addEventListener("click", (event) => {
+      if (event.target === qrModal) {
+        closeQrModal();
+      }
+    });
+    copyLinkButton.addEventListener("click", async () => {
+      const value = getQrTargetUrl();
+
+      if (!value) {
+        qrNote.textContent = "No shareable link is ready yet.";
+        return;
+      }
+
+      try {
+        await navigator.clipboard.writeText(value);
+        qrNote.textContent = "Link copied.";
+      } catch (error) {
+        qrNote.textContent = "Copy failed on this browser. You can still copy the URL manually.";
+      }
+    });
+    window.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && !qrModal.hidden) {
+        closeQrModal();
+      }
+    });
+
+    buildHeart();
+    if (window.location.hash === "#qr") {
+      openQrModal();
+    } else {
+      updateQr();
+    }
+    requestAnimationFrame(animateOrbit);
+    window.addEventListener("resize", buildHeart);
+  </script>
+</body>
+</html>
