@@ -121,6 +121,8 @@
       height: 100%;
       object-fit: contain;
       display: block;
+      image-rendering: crisp-edges;
+      image-rendering: pixelated;
     }
 
     .qr-placeholder {
@@ -176,6 +178,19 @@
       display: none;
     }
 
+    .qr-action-full {
+      width: 100%;
+      margin-top: 10px;
+    }
+
+    .orbit-current {
+      margin: 10px 2px 0;
+      color: rgba(255, 215, 230, 0.72);
+      font-size: 0.78rem;
+      line-height: 1.45;
+      word-break: break-word;
+    }
+
     .ui_love_word {
       color: #ea80b0;
       font-size: 0.9rem;
@@ -199,7 +214,6 @@
       font-size: clamp(1.35rem, 1.05rem + 0.8vw, 1.8rem);
       font-weight: 700;
       letter-spacing: 0.14em;
-      text-transform: lowercase;
       white-space: nowrap;
       text-shadow:
         0 0 10px rgba(255, 150, 201, 0.45),
@@ -278,6 +292,8 @@
         <button class="qr-action" id="copy-link" type="button">Copy Link</button>
         <a class="qr-action" id="open-link" href="#" target="_blank" rel="noreferrer" hidden>Open Link</a>
       </div>
+      <button class="qr-action qr-action-full" id="edit-orbit-text" type="button">เพิ่มข้อความ</button>
+      <p class="orbit-current" id="orbit-current"></p>
     </div>
   </div>
 
@@ -295,10 +311,16 @@
     const qrNote = document.getElementById("qr-note");
     const copyLinkButton = document.getElementById("copy-link");
     const openLinkButton = document.getElementById("open-link");
+    const editOrbitTextButton = document.getElementById("edit-orbit-text");
+    const orbitCurrent = document.getElementById("orbit-current");
     const totalWords = 92;
     const text = "I love you";
+    const DEFAULT_ORBIT_TEXT = "";
+    const ORBIT_TEXT_STORAGE_KEY = "heart-orbit-text";
     // ถ้ามีลิงก์ GitHub Pages แล้ว ให้นำมาใส่ตรงนี้เพื่อบังคับให้ QR ชี้ไปที่ลิงก์ public เสมอ
-    const PUBLIC_SHARE_URL = "";
+    const PUBLIC_SHARE_URL = "https://sanchai4444.github.io/projrct-love/";
+    // ลิงก์วงเดียวกันที่อยากให้ QR ใช้เป็นหลักตอนยังไม่มีลิงก์ public
+    const PREFERRED_LAN_URL = "http://192.168.1.35:8000/index.html";
     const DEFAULT_LAN_HOST = "192.168.1.35";
     const LOCAL_HOSTNAMES = ["localhost", "127.0.0.1", "::1"];
 
@@ -308,6 +330,45 @@
       } catch (error) {
         return null;
       }
+    }
+
+    function sanitizeOrbitText(value) {
+      return String(value || "").replace(/\s+/g, " ").trim();
+    }
+
+    function readSavedOrbitText() {
+      try {
+        return sanitizeOrbitText(localStorage.getItem(ORBIT_TEXT_STORAGE_KEY));
+      } catch (error) {
+        return "";
+      }
+    }
+
+    function saveOrbitText(value) {
+      try {
+        localStorage.setItem(ORBIT_TEXT_STORAGE_KEY, value);
+      } catch (error) {
+        // บางเบราว์เซอร์อาจไม่อนุญาต localStorage แต่ไม่ควรทำให้หน้าใช้งานไม่ได้
+      }
+    }
+
+    function applyOrbitText(value) {
+      const nextText = sanitizeOrbitText(value) || DEFAULT_ORBIT_TEXT;
+      const length = nextText.length;
+      const fontSize =
+        length > 18
+          ? "clamp(0.9rem, 0.8rem + 0.48vw, 1.15rem)"
+          : length > 10
+            ? "clamp(1.05rem, 0.92rem + 0.62vw, 1.42rem)"
+            : "clamp(1.35rem, 1.05rem + 0.8vw, 1.8rem)";
+      const letterSpacing = length > 14 ? "0.05em" : "0.14em";
+
+      orbitWord.textContent = nextText;
+      orbitWord.style.fontSize = fontSize;
+      orbitWord.style.letterSpacing = letterSpacing;
+      orbitCurrent.textContent = `ข้อความที่กำลังโคจร: ${nextText}`;
+
+      return nextText;
     }
 
     function isShareableUrl(value) {
@@ -361,9 +422,14 @@
     function getQrTargetUrl() {
       const currentUrl = tryParseUrl(window.location.href);
       const configuredPublicUrl = tryParseUrl(PUBLIC_SHARE_URL);
+      const preferredLanUrl = tryParseUrl(PREFERRED_LAN_URL);
 
       if (configuredPublicUrl && isPublicInternetUrl(PUBLIC_SHARE_URL)) {
         return configuredPublicUrl.href;
+      }
+
+      if (preferredLanUrl && isShareableUrl(PREFERRED_LAN_URL)) {
+        return preferredLanUrl.href;
       }
 
       if (isShareableUrl(window.location.href)) {
@@ -429,6 +495,18 @@
 
     function closeQrModal() {
       qrModal.hidden = true;
+    }
+
+    function editOrbitText() {
+      const currentText = sanitizeOrbitText(orbitWord.textContent) || DEFAULT_ORBIT_TEXT;
+      const nextText = window.prompt("พิมพ์ข้อความที่จะให้โคจรรอบหัวใจ", currentText);
+
+      if (nextText === null) {
+        return;
+      }
+
+      const appliedText = applyOrbitText(nextText);
+      saveOrbitText(appliedText);
     }
 
     function heartPoint(t) {
@@ -535,7 +613,7 @@
       container.appendChild(orbitWord);
     }
 
-    // ทำให้คำว่า "" โคจรรอบหัวใจและสลับไปอยู่ด้านหน้า/ด้านหลัง
+    // ทำให้ข้อความที่เลือกไว้โคจรรอบหัวใจและสลับไปอยู่ด้านหน้า/ด้านหลัง
     function animateOrbit(time) {
       const t = time * 0.001;
       const isMobile = Math.min(window.innerWidth, window.innerHeight) < 640;
@@ -588,12 +666,14 @@
         qrNote.textContent = "Copy failed on this browser. You can still copy the URL manually.";
       }
     });
+    editOrbitTextButton.addEventListener("click", editOrbitText);
     window.addEventListener("keydown", (event) => {
       if (event.key === "Escape" && !qrModal.hidden) {
         closeQrModal();
       }
     });
 
+    applyOrbitText(readSavedOrbitText());
     buildHeart();
     if (window.location.hash === "#qr") {
       openQrModal();
