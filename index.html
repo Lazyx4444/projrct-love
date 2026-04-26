@@ -315,7 +315,6 @@
     const totalWords = 92;
     const text = "I love you";
     const DEFAULT_ORBIT_TEXT = "";
-    const ORBIT_TEXT_STORAGE_KEY = "heart-orbit-text";
     const ORBIT_QUERY_PARAM = "orbit";
     // ถ้ามีลิงก์ GitHub Pages แล้ว ให้นำมาใส่ตรงนี้เพื่อบังคับให้ QR ชี้ไปที่ลิงก์ public เสมอ
     const PUBLIC_SHARE_URL = "https://lazyx4444.github.io/projrct-love/";
@@ -344,22 +343,6 @@
       }
 
       return sanitizeOrbitText(currentUrl.searchParams.get(ORBIT_QUERY_PARAM));
-    }
-
-    function readSavedOrbitText() {
-      try {
-        return sanitizeOrbitText(localStorage.getItem(ORBIT_TEXT_STORAGE_KEY));
-      } catch (error) {
-        return "";
-      }
-    }
-
-    function saveOrbitText(value) {
-      try {
-        localStorage.setItem(ORBIT_TEXT_STORAGE_KEY, value);
-      } catch (error) {
-        // บางเบราว์เซอร์อาจไม่อนุญาต localStorage แต่ไม่ควรทำให้หน้าใช้งานไม่ได้
-      }
     }
 
     function applyOrbitText(value) {
@@ -535,8 +518,7 @@
         return;
       }
 
-      const appliedText = applyOrbitText(nextText);
-      saveOrbitText(appliedText);
+      applyOrbitText(nextText);
       updateQr();
     }
 
@@ -705,12 +687,7 @@
     });
 
     const orbitTextFromUrl = readOrbitTextFromUrl();
-    const initialOrbitText = orbitTextFromUrl || readSavedOrbitText();
-    const appliedInitialOrbitText = applyOrbitText(initialOrbitText);
-
-    if (orbitTextFromUrl) {
-      saveOrbitText(appliedInitialOrbitText);
-    }
+    applyOrbitText(orbitTextFromUrl || DEFAULT_ORBIT_TEXT);
 
     buildHeart();
     if (window.location.hash === "#qr") {
