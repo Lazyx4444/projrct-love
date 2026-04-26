@@ -317,6 +317,7 @@
     const text = "I love you";
     const DEFAULT_ORBIT_TEXT = "";
     const ORBIT_TEXT_STORAGE_KEY = "heart-orbit-text";
+    const ORBIT_QUERY_PARAM = "orbit";
     // ถ้ามีลิงก์ GitHub Pages แล้ว ให้นำมาใส่ตรงนี้เพื่อบังคับให้ QR ชี้ไปที่ลิงก์ public เสมอ
     const PUBLIC_SHARE_URL = "https://sanchai4444.github.io/projrct-love/";
     // ลิงก์วงเดียวกันที่อยากให้ QR ใช้เป็นหลักตอนยังไม่มีลิงก์ public
@@ -334,6 +335,16 @@
 
     function sanitizeOrbitText(value) {
       return String(value || "").replace(/\s+/g, " ").trim();
+    }
+
+    function readOrbitTextFromUrl() {
+      const currentUrl = tryParseUrl(window.location.href);
+
+      if (!currentUrl) {
+        return "";
+      }
+
+      return sanitizeOrbitText(currentUrl.searchParams.get(ORBIT_QUERY_PARAM));
     }
 
     function readSavedOrbitText() {
@@ -369,6 +380,26 @@
       orbitCurrent.textContent = `ข้อความที่กำลังโคจร: ${nextText}`;
 
       return nextText;
+    }
+
+    function buildShareUrl(baseValue) {
+      const shareUrl = tryParseUrl(baseValue);
+
+      if (!shareUrl) {
+        return "";
+      }
+
+      const orbitText = sanitizeOrbitText(orbitWord.textContent);
+
+      shareUrl.hash = "";
+
+      if (orbitText) {
+        shareUrl.searchParams.set(ORBIT_QUERY_PARAM, orbitText);
+      } else {
+        shareUrl.searchParams.delete(ORBIT_QUERY_PARAM);
+      }
+
+      return shareUrl.toString();
     }
 
     function isShareableUrl(value) {
@@ -425,15 +456,15 @@
       const preferredLanUrl = tryParseUrl(PREFERRED_LAN_URL);
 
       if (configuredPublicUrl && isPublicInternetUrl(PUBLIC_SHARE_URL)) {
-        return configuredPublicUrl.href;
+        return buildShareUrl(configuredPublicUrl.href);
       }
 
       if (preferredLanUrl && isShareableUrl(PREFERRED_LAN_URL)) {
-        return preferredLanUrl.href;
+        return buildShareUrl(preferredLanUrl.href);
       }
 
       if (isShareableUrl(window.location.href)) {
-        return window.location.href;
+        return buildShareUrl(window.location.href);
       }
 
       const isFileUrl = currentUrl && currentUrl.protocol === "file:";
@@ -443,7 +474,7 @@
 
       if (DEFAULT_LAN_HOST) {
         const normalizedPort = port && port !== "80" ? `:${port}` : "";
-        return `http://${DEFAULT_LAN_HOST}${normalizedPort}${path}${search}`;
+        return buildShareUrl(`http://${DEFAULT_LAN_HOST}${normalizedPort}${path}${search}`);
       }
 
       return "";
@@ -507,6 +538,7 @@
 
       const appliedText = applyOrbitText(nextText);
       saveOrbitText(appliedText);
+      updateQr();
     }
 
     function heartPoint(t) {
@@ -673,7 +705,14 @@
       }
     });
 
-    applyOrbitText(readSavedOrbitText());
+    const orbitTextFromUrl = readOrbitTextFromUrl();
+    const initialOrbitText = orbitTextFromUrl || readSavedOrbitText();
+    const appliedInitialOrbitText = applyOrbitText(initialOrbitText);
+
+    if (orbitTextFromUrl) {
+      saveOrbitText(appliedInitialOrbitText);
+    }
+
     buildHeart();
     if (window.location.hash === "#qr") {
       openQrModal();
